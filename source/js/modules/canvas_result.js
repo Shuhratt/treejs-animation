@@ -1,6 +1,12 @@
 import seaImg from "../../img/module-4/win-primary-images/sea-calf-2.png";
 import iceImg from "../../img/module-4/win-primary-images/ice.png";
 
+function rotateCtx(ctx, angle, cx, cy) {
+  ctx.translate(cx, cy);
+  ctx.rotate((Math.PI / 180) * angle);
+  ctx.translate(-cx, -cy);
+}
+
 const images = [
   {
     url: () => {
@@ -26,7 +32,22 @@ const images = [
 ];
 
 let requestAnimationFrameId;
-let imageTranslateX = 0;
+
+// Для анимации сохраняем на каждый кадр предыдущее состояние
+let imageTranslateY = -300; // первый кадр начинается с низа
+
+let END = false;
+
+const scenario = {
+  walrus: {
+    translateUp: true,
+    translateDown: false,
+    rotate: 10,
+  },
+};
+
+const LINE_UP = 50;
+const CORD_Y = 3; // на сколько нужно смещать картинку
 
 function animate() {
   const canvas = document.getElementById("result_animation_1");
@@ -36,23 +57,54 @@ function animate() {
   if (canvas.getContext) {
     const ctx = canvas.getContext("2d");
     ctx.globalCompositeOperation = "destination-over"; //z-index
+    console.info("animate");
 
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-    console.log("animate");
 
     images.forEach((image) => {
+      // ctx.save();
+      const cordY = image.position.y - imageTranslateY;
+
+      rotateCtx(
+        ctx,
+        scenario.walrus.rotate,
+        image.position.x + image.size.w / 2,
+        cordY + image.size.h / 2
+      );
       ctx.drawImage(
         image.url(),
-        image.position.x + imageTranslateX,
-        image.position.y,
+        image.position.x,
+        cordY,
         image.size.w,
         image.size.h
       );
+      // ctx.restore();
     });
 
-    if (imageTranslateX < 500) {
+    if (!END) {
+      if (scenario.walrus.translateUp) {
+        // сценарий вверх морж
+        imageTranslateY += CORD_Y;
+      }
+
+      if (imageTranslateY > LINE_UP) {
+        // когда дошли до вверха
+        scenario.walrus.translateUp = false;
+        scenario.walrus.translateDown = true;
+      }
+
+      if (scenario.walrus.translateDown) {
+        //сценарий вниз морж
+        imageTranslateY -= CORD_Y;
+        scenario.walrus.rotate -= 0.6;
+
+        if (imageTranslateY === 0) {
+          scenario.walrus.translateDown = false;
+          END = true;
+        }
+      }
+
       requestAnimationFrameId = window.requestAnimationFrame(animate);
-      imageTranslateX += 2;
     } else {
       cancelAnimationFrame(requestAnimationFrameId);
     }
